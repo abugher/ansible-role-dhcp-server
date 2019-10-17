@@ -7,6 +7,24 @@ template_files:
     mode:               '0644'
     src:                "{{ role_path }}/templates/dhcpd.conf.j2"
     dest:               '/etc/dhcp/dhcpd.conf'
+lines_in_files:
+  # The Debian sysv init script for isc-dhcp-server starts IPv4 and IPv6
+  # instances in parallel, unless INTERFACESv4 is defined, in which case it
+  # must be set to the correct interface name, or else the server will fail.
+  # The manual page says that the interfaces field should not be used unless
+  # necessary.  There doesn't seem to be a wildcard value.  I don't want to
+  # turn on fact gathering and try to plug in the correct interface name, here.
+  # Just add "-4".  The IPv6 instance will fail noisily, and ansible
+  # deployments won't be happy, but the server will function.
+  - regexp:             '^IPV4ONLY='
+    line:               'IPV4ONLY="yes_please"'
+    dest:               '/etc/default/isc-dhcp-server'
+install_files:
+  - owner:              'root'
+    group:              'root'
+    mode:               '0755'
+    src:                'files/init.d/isc-dhcp-server'
+    dest:               '/etc/init.d/isc-dhcp-server'
 enable_services:
   - 'isc-dhcp-server'
 start_services:
