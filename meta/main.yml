@@ -1,4 +1,0 @@
----
-dependencies:
-  - role:       'static_address'
-    when:       skipdeps is not defined

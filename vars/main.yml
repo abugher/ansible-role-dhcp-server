@@ -31,3 +31,4 @@ start_services:
   - 'isc-dhcp-server'
 restart_services:
   - 'isc-dhcp-server'
+  - 'static_address'
