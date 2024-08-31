@@ -20,7 +20,6 @@ subnet 192.168.11.0 netmask 255.255.255.0 {
 
 
 # EFI netboot
-# This doesn't work yet.
 group {
   option                broadcast-address       192.168.11.255;
   option                routers                 {% for h in groups['gateway'] %}{{ h }}.{{ domain }}{% if not loop.last %}, {% endif %}{% endfor %};
