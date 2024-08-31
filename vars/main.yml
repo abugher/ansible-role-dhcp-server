@@ -25,6 +25,10 @@ install_files:
     mode:               '0755'
     src:                'files/init.d/isc-dhcp-server'
     dest:               '/etc/init.d/isc-dhcp-server'
+commands:
+  # validate configuration
+  - command:            '/usr/sbin/dhcpd -t -cf /etc/dhcp/dhcpd.conf'
+    changed_when:       False
 enable_services:
   - 'isc-dhcp-server'
 start_services:

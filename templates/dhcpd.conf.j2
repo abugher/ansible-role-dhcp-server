@@ -15,66 +15,88 @@ option                  architecture-type       code 93 = unsigned integer 16;
 subnet 192.168.11.0 netmask 255.255.255.0 {
   option                broadcast-address       192.168.11.255;
   option                routers                 {% for h in groups['gateway'] %}{{ h }}.{{ domain }}{% if not loop.last %}, {% endif %}{% endfor %};
-  #option                domain-name-servers     192.168.11.54;
   range                 192.168.11.10           192.168.11.50;
 }
 
+
+# EFI netboot
+# This doesn't work yet.
 group {
-  # EFI netboot
-  # This doesn't work yet.
   option                broadcast-address       192.168.11.255;
   option                routers                 {% for h in groups['gateway'] %}{{ h }}.{{ domain }}{% if not loop.last %}, {% endif %}{% endfor %};
-  #option                domain-name-servers     192.168.11.54;
 
+  server-name           {{ groups['debian-netboot'][0] }};
+  next-server           {{ hostvars[groups['debian-netboot'][0]].ip_address }};
+{#
+  # Aspirational:  Boot a menu or something by default.
   filename              "syslinux.efi";
+#}
 
+{% for h in groups['netinstall-efi-clients'] %}
+{% if hostvars[h].mac_address is defined and hostvars[h].ip_address %}
+  host netboot-{{ h }} {
+    hardware ethernet   {{ hostvars[h].netboot_mac_address }};
+    fixed-address       {{ h }}.{{ domain }};
+    filename            "debian-installer/amd64/bootnetx64.efi";
+  }
+
+{% else %}
+  # {{ h }} is not fully configured.  ip_address and mac_address are required.  See ansible inventory and host_vars.
+
+{% endif %}
+{% endfor %}
+{#
   # First instruct PXE firmware to download ipxe, then instruct ipxe to download syslinux.
   #if exists user-class and option user-class = "iPXE" {
-  #  filename            "tftp://{{ inventory_hostname }}/syslinux.efi";
-  #} else {
-  #  filename            "ipxe.efi";
-  #}
- 
-#  host abugher-lt-uefi {
-#    hardware ethernet   28:f1:0e:4d:19:0a;
-#    fixed-address       abugher-lt.neuronpointer.net;
-#  }
+    filename            "tftp://{{ inventory_hostname }}/syslinux.efi";
+  } else {
+    filename            "ipxe.efi";
+  }
+#}
 }
 
+
+# legacy netboot
 group {
-  # legacy netboot
   option                broadcast-address       192.168.11.255;
   option                routers                 {% for h in groups['gateway'] %}{{ h }}.{{ domain }}{% if not loop.last %}, {% endif %}{% endfor %};
-  #option                domain-name-servers     192.168.11.54;
-  filename              "lpxelinux.0";
 
-#  host mawg {
-#    hardware ethernet   9C:4E:36:C0:D6:00;
-#    fixed-address       mawg.neuronpointer.net;
-#  }
-#
-#  host abugher-lt-bios {
-#    hardware ethernet   9c:eb:e8:40:80:dd;
-#    fixed-address       abugher-lt.neuronpointer.net;
-#  }
+  server-name           {{ groups['debian-netboot'][0] }};
+  next-server           {{ hostvars[groups['debian-netboot'][0]].ip_address }};
+{#
+  # Aspirational:  Boot a menu or something by default.
+  filename              "pxelinux.0";
+#}
+
+{% for h in groups['netinstall-bios-clients'] %}
+{% if hostvars[h].mac_address is defined and hostvars[h].ip_address %}
+  host netboot-{{ h }} {
+    hardware ethernet   {{ hostvars[h].netboot_mac_address }};
+    fixed-address       {{ h }}.{{ domain }};
+    filename            "debian-installer/amd64/pxelinux.0";
+  }
+
+{% else %}
+  # {{ h }} is not fully configured.  ip_address and mac_address are required.  See ansible inventory and host_vars.
+
+{% endif %}
+{% endfor %}
 }
 
+
+# no netboot
 group {
-  # no netboot
   option                broadcast-address       192.168.11.255;
   option                routers                 {% for h in groups['gateway'] %}{{ h }}.{{ domain }}{% if not loop.last %}, {% endif %}{% endfor %};
-  #option                domain-name-servers     192.168.11.54;
 
 {% for h in groups['dhcp-clients'] %}
 {% if hostvars[h].mac_address is defined and hostvars[h].ip_address %}
-
   host {{ h }} {
     hardware ethernet   {{ hostvars[h].mac_address }};
     fixed-address       {{ h }}.{{ domain }};
   }
 
 {% else %}
-
   # {{ h }} is not fully configured.  ip_address and mac_address are required.  See ansible inventory and host_vars.
 
 {% endif %}
