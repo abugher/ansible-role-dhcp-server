@@ -62,7 +62,7 @@ group {
 }
 
 
-# hosts registered for network booted OS installation
+# netinstall hosts
 group {
   server-name           {{ groups['debian-netboot'][0] }};
   next-server           {{ hostvars[groups['debian-netboot'][0]].ip_address }};
