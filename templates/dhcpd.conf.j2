@@ -14,6 +14,14 @@ ddns-update-style       none;
 # http://www.syslinux.org/wiki/index.php?title=PXELINUX#UEFI
 option                  architecture-type       code 93 = unsigned integer 16;
 
+if option architecture-type = 00:07 {
+  # EFI
+  filename              "ipxe/ipxe.efi";
+} else {
+  # BIOS - untested
+  filename              "pxelinux/pxelinux.0";
+}
+
 
 # unregistered hosts
 subnet 192.168.11.0 netmask 255.255.255.0 {
@@ -23,6 +31,8 @@ subnet 192.168.11.0 netmask 255.255.255.0 {
 
 # registered hosts
 group {
+  server-name           {{ groups['debian-netboot'][0] }};
+  next-server           {{ hostvars[groups['debian-netboot'][0]].ip_address }};
 
 {% for h in groups['dhcp-clients'] %}
 {% if hostvars[h].mac_address is defined and hostvars[h].ip_address %}
@@ -36,27 +46,11 @@ group {
 
 {% endif %}
 {% endfor %}
-}
-
-
-# hosts registered for network booted OS installation
-group {
-  server-name           {{ groups['debian-netboot'][0] }};
-  next-server           {{ hostvars[groups['debian-netboot'][0]].ip_address }};
-  filename              "pxelinux/pxelinux.0";
-
-{% for h in groups['netinstall-clients'] %}
+{% for h in groups['netboot-clients'] %}
 {% if hostvars[h].mac_address is defined and hostvars[h].ip_address %}
   host netboot-{{ h }} {
     hardware ethernet   {{ hostvars[h].netboot_mac_address }};
     fixed-address       {{ h }}.{{ domain }};
-    if option architecture-type = 00:07 {
-      # EFI
-      filename          "debian-installer/amd64/bootnetx64.efi";
-    } else {
-      # BIOS - untested
-      filename          "debian-installer/amd64/pxelinux.0";
-    }
   }
 
 {% else %}
@@ -64,12 +58,32 @@ group {
 
 {% endif %}
 {% endfor %}
-{#
-  # First instruct PXE firmware to download ipxe, then instruct ipxe to download syslinux.
-  #if exists user-class and option user-class = "iPXE" {
-    filename            "tftp://{{ inventory_hostname }}/syslinux.efi";
+
+}
+
+
+# hosts registered for network booted OS installation
+group {
+  server-name           {{ groups['debian-netboot'][0] }};
+  next-server           {{ hostvars[groups['debian-netboot'][0]].ip_address }};
+  if option architecture-type = 00:07 {
+    # EFI
+    filename            "debian-installer/amd64/bootnetx64.efi";
   } else {
-    filename            "ipxe.efi";
+    # BIOS - untested
+    filename            "debian-installer/amd64/pxelinux.0";
   }
-#}
+
+{% for h in groups['netinstall-clients'] %}
+{% if hostvars[h].mac_address is defined and hostvars[h].ip_address %}
+  host netinstall-{{ h }} {
+    hardware ethernet   {{ hostvars[h].netboot_mac_address }};
+    fixed-address       {{ h }}.{{ domain }};
+  }
+
+{% else %}
+  # {{ h }} is not fully configured.  ip_address and netboot_mac_address are required.  See ansible inventory and host_vars.
+
+{% endif %}
+{% endfor %}
 }
