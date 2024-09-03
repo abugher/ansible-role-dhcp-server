@@ -1,5 +1,5 @@
-option                  domain-search           "neuronpointer.net";
-option                  domain-name             "neuronpointer.net";
+option                  domain-search           "{{ domain }}";
+option                  domain-name             "{{ domain }}";
 # No quotes on the values for domain-name-servers.
 option                  domain-name-servers     {% for h in groups['dns-internal'] %}{{ h }}.{{ domain }}{% if not loop.last %}, {% endif %}{% endfor %};
 option                  ntp-servers             {% for h in groups['time-server'] %}{{ h }}.{{ domain }}{% if not loop.last %}, {% endif %}{% endfor %};
@@ -14,78 +14,46 @@ authoritative;
 log-facility            local7;
 ddns-update-style       none;
 
-
 server-name             {{ groups['debian-netboot'][0] }};
-next-server             {{ hostvars[groups['debian-netboot'][0]].ip_address }};
+next-server             {{ hostvars[groups['debian-netboot'][0]]['ip_address'] }};
 
 if exists user-class and option user-class = "iPXE" {
-  # iPXE
-  filename              "debian-live.ipxe";
+  # client is iPXE - send boot menu
+  filename              "menu.ipxe";
 } elsif option architecture-type = 00:07 {
-  # EFI
+  # client is EFI - send iPXE
   filename              "ipxe/ipxe.efi";
+  #filename              "debian-installer/amd64/bootnetx64.efi";
 } else {
-  # BIOS - untested
-  filename              "pxelinux/pxelinux.0";
+  # client is BIOS - send iPXE - untested
+  filename              "ipxe/ipxe.lkrn";
 }
 
 
-# unregistered hosts
+# unregistered hosts get a random draw from a dedicated range
+# (
 subnet 192.168.11.0 netmask 255.255.255.0 {
   range                 192.168.11.10           192.168.11.50;
 }
 
 
-# registered hosts
+# registered DHCP clients get a fixed address and hostname
 group {
-
 {% for h in groups['dhcp-clients'] %}
-{% if hostvars[h].mac_address is defined and hostvars[h].ip_address %}
-  host {{ h }} {
-    hardware ethernet   {{ hostvars[h].mac_address }};
+{% if hostvars[h]['mac_address'] is defined and hostvars[h]['ip_address'] %}
+  host dhcp-{{ h }} {
+    hardware ethernet   {{ hostvars[h]['mac_address'] }};
     fixed-address       {{ h }}.{{ domain }};
   }
-
-{% else %}
-  # {{ h }} is not fully configured.  ip_address and mac_address are required.  See ansible inventory and host_vars.
-
-{% endif %}
-{% endfor %}
-{% for h in groups['netboot-clients'] %}
-{% if hostvars[h].mac_address is defined and hostvars[h].ip_address %}
+{% if hostvars[h]['netboot_mac_address'] is defined %}
   host netboot-{{ h }} {
-    hardware ethernet   {{ hostvars[h].netboot_mac_address }};
+    hardware ethernet   {{ hostvars[h]['netboot_mac_address'] }};
     fixed-address       {{ h }}.{{ domain }};
   }
+{% endif %}
 
 {% else %}
   # {{ h }} is not fully configured.  ip_address and mac_address are required.  See ansible inventory and host_vars.
-
-{% endif %}
-{% endfor %}
-
-}
-
-
-# netinstall hosts
-group {
-  if option architecture-type = 00:07 {
-    # EFI
-    filename            "debian-installer/amd64/bootnetx64.efi";
-  } else {
-    # BIOS - untested
-    filename            "debian-installer/amd64/pxelinux.0";
-  }
-
-{% for h in groups['netinstall-clients'] %}
-{% if hostvars[h].mac_address is defined and hostvars[h].ip_address %}
-  host netinstall-{{ h }} {
-    hardware ethernet   {{ hostvars[h].netboot_mac_address }};
-    fixed-address       {{ h }}.{{ domain }};
-  }
-
-{% else %}
-  # {{ h }} is not fully configured.  ip_address and netboot_mac_address are required.  See ansible inventory and host_vars.
 
 {% endif %}
 {% endfor %}
