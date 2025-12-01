@@ -3,7 +3,7 @@ option                  domain-name             "{{ domain }}";
 # No quotes on the values for domain-name-servers.
 option                  domain-name-servers     {% for h in groups['dns-internal'] %}{{ h }}.{{ domain }}{% if not loop.last %}, {% endif %}{% endfor %};
 option                  ntp-servers             {% for h in groups['time-server'] %}{{ h }}.{{ domain }}{% if not loop.last %}, {% endif %}{% endfor %};
-option                  routers                 {% for h in groups['gateway'] %}{{ h }}.{{ domain }}{% if not loop.last %}, {% endif %}{% endfor %};
+option                  routers                 {% for h in groups['gateways'] %}{{ h }}.{{ domain }}{% if not loop.last %}, {% endif %}{% endfor %};
 option                  broadcast-address       192.168.11.255;
 # http://www.syslinux.org/wiki/index.php?title=PXELINUX#UEFI
 option                  architecture-type       code 93 = unsigned integer 16;
